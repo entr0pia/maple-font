@@ -6,3 +6,8 @@ cdn
 
 __pycache__
 .DS_store
+*.zip
+.venv
+.vscode
+uv.lock
+*.backup
