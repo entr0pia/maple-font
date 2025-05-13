@@ -284,7 +284,7 @@
         },
         "narrow": {
           "type": "boolean",
-          "description": "[Experimental] Whether to narrow CN characters. THIS WILL BREAK THE 2:1 METRIC\nOnly supported in VSCode currently",
+          "description": "Whether to narrow CN characters. This option will make the font cannot be recogized as monospaced font",
           "default": false
         },
         "use_hinted": {
@@ -296,6 +296,11 @@
           "type": "boolean",
           "description": "whether to use large pre-instantiated static CN font as base font (instantiate will cost 40-50 minutes)",
           "default": true
+        },
+        "scale_factor": {
+          "type": "number",
+          "description": "Scale factor for CN glyphs (default: 1.0)",
+          "default": 1.0
         }
       },
       "required": [

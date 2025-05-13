@@ -129,7 +129,12 @@ def parse_args(args: list[str] | None = None):
     feature_group.add_argument(
         "--cn-narrow",
         action="store_true",
-        help="Make CN characters narrow (experimental)",
+        help="Make CN characters narrow (And the font cannot be recogized as monospaced font)",
+    )
+    feature_group.add_argument(
+        "--cn-scale-factor",
+        type=float,
+        help="Scale factor for CN glyphs (e.g. 1.1)",
     )
 
     build_group = parser.add_argument_group("Build Options")
@@ -176,7 +181,7 @@ def parse_args(args: list[str] | None = None):
     build_group.add_argument(
         "--least-styles",
         action="store_true",
-        help="Only build regular / bold / italic / bold italic style",
+        help="Only build Regular / Bold / Italic / BoldItalic style",
     )
     build_group.add_argument(
         "--cache",
@@ -202,7 +207,6 @@ def parse_args(args: list[str] | None = None):
 
 class FontConfig:
     def __init__(self, args, version: str | None = None):
-
         if version:
             global FONT_VERSION
             FONT_VERSION = version
@@ -287,6 +291,8 @@ class FontConfig:
             "use_hinted": False,
             # whether to use pre-instantiated static CN font as base font
             "use_static_base_font": True,
+            # scale factor for CN glyphs
+            "scale_factor": 1.0,
         }
         self.glyph_width = 600
         self.glyph_width_cn_narrow = 1000
@@ -335,9 +341,8 @@ class FontConfig:
         except FileNotFoundError:
             print(f"🚨 Config file not found: {config_file_path}, use default config")
         except json.JSONDecodeError:
-            print(
-                f"❗ Error: Invalid JSON in config file: {config_file_path}, use default config"
-            )
+            print(f"❗ Error: Invalid JSON in config file: {config_file_path}")
+            exit(1)
         except Exception as e:
             print(f"❗ An unexpected error occurred: {e}")
             exit(1)
@@ -375,6 +380,9 @@ class FontConfig:
         if args.cn_narrow:
             self.cn["narrow"] = True
 
+        if args.cn_scale_factor:
+            self.cn["scale_factor"] = args.cn_scale_factor
+
         if args.ttf_only:
             self.ttf_only = True
 
@@ -411,12 +419,15 @@ class FontConfig:
 
     def get_valid_glyph_width_list(self, cn=False):
         if cn:
+            cn = (
+                self.glyph_width_cn_narrow
+                if self.cn["narrow"]
+                else 2 * self.glyph_width
+            )
             return [
                 0,
                 self.glyph_width,
-                self.glyph_width_cn_narrow
-                if self.cn["narrow"]
-                else 2 * self.glyph_width,
+                cn,
             ]
         else:
             return [0, self.glyph_width]
@@ -428,7 +439,17 @@ class FontConfig:
         is_italic: bool,
         is_cn: bool,
         is_variable: bool,
+        fea_path: str | None = None,
     ):
+        if self.apply_fea_file:
+            if fea_path:
+                print(f"Apply feature file [{fea_path}]")
+                addOpenTypeFeatures(
+                    font,
+                    fea_path,
+                )
+            return
+
         fea_str = generate_fea_string(
             is_italic=is_italic,
             is_cn=is_cn,
@@ -802,7 +823,9 @@ def get_unique_identifier(
     return f"{font_config.version_str}{beta_str};SUBF;{postscript_name};2024;FL830;{suffix}"
 
 
-def change_glyph_width(font: TTFont, match_width: int, target_width: int):
+def change_glyph_width_or_scale(
+    font: TTFont, match_width: int, target_width: int, scale_factor: float
+):
     font["hhea"].advanceWidthMax = target_width  # type: ignore
     for name in font.getGlyphOrder():
         glyph = font["glyf"][name]  # type: ignore
@@ -813,12 +836,21 @@ def change_glyph_width(font: TTFont, match_width: int, target_width: int):
             font["hmtx"][name] = (target_width, lsb)  # type: ignore
             continue
 
-        delta = round((target_width - width) / 2)
+        glyph.coordinates.scale((scale_factor, scale_factor))
+        glyph.xMin, glyph.yMin, glyph.xMax, glyph.yMax = (
+            glyph.coordinates.calcIntBounds()
+        )
+
+        scaled_width = int(round(width * scale_factor))
+        delta = (target_width - scaled_width) / 2
+
         glyph.coordinates.translate((delta, 0))
         glyph.xMin, glyph.yMin, glyph.xMax, glyph.yMax = (
             glyph.coordinates.calcIntBounds()
         )
-        font["hmtx"][name] = (target_width, lsb + delta)  # type: ignore
+
+        new_lsb = lsb + int(round(delta))
+        font["hmtx"][name] = (target_width, new_lsb)  # type: ignore
 
 
 def update_font_names(
@@ -1108,11 +1140,39 @@ def build_cn(f: str, font_config: FontConfig, build_option: BuildOption):
         freeze_config=font_config.feature_freeze,
     )
 
-    if font_config.cn["narrow"]:
-        change_glyph_width(
+    target_width = (
+        font_config.glyph_width_cn_narrow if font_config.cn["narrow"] else None
+    )
+    scale_factor = (
+        font_config.cn["scale_factor"]
+        if font_config.cn["scale_factor"] != 1.0
+        else None
+    )
+    if target_width or scale_factor:
+        match_width = 2 * font_config.glyph_width
+
+        # Change glyph width and keep monospace identifier will cause
+        # Intellij IDEA / Windows Notepad and other applications to
+        # render the font incorrectly. See details in #249
+        if target_width:
+            cn_font["post"].isFixedPitch = False  # type: ignore
+            cn_font["OS/2"].panose.bProportion = 0  # type: ignore
+            cn_font["OS/2"].panose.bSpacing = 0  # type: ignore
+            cn_font["hhea"].advanceWidthMax = target_width  # type: ignore
+            print("Changed CN glyph width, mark font file as not monospaced")
+        else:
+            target_width = match_width
+
+        if scale_factor:
+            print(f"Scale CN glyph to {scale_factor}x")
+        else:
+            scale_factor = 1
+
+        change_glyph_width_or_scale(
             font=cn_font,
-            match_width=2 * font_config.glyph_width,
-            target_width=font_config.glyph_width_cn_narrow,
+            match_width=match_width,
+            target_width=target_width,
+            scale_factor=scale_factor,
         )
 
     # https://github.com/subframe7536/maple-font/issues/239
@@ -1232,7 +1292,9 @@ def main(args: list[str] | None = None, version: str | None = None):
     makedirs(build_option.output_variable, exist_ok=True)
 
     start_time = time.time()
-    print(f"🚩 Start building {font_config.family_name} {font_config.version_str} ...\n")
+    print(
+        f"🚩 Start building {font_config.family_name} {font_config.version_str} ...\n"
+    )
 
     # =========================================================================================
     # ===================================   Build basic   =====================================
@@ -1257,25 +1319,18 @@ def main(args: list[str] | None = None, version: str | None = None):
             )
 
             is_italic = "Italic" in input_file
-            if font_config.apply_fea_file:
-                fea_path = joinPaths(
+
+            font_config.patch_fea_string(
+                font=font,
+                issue_fea_dir=build_option.output_dir,
+                is_italic=is_italic,
+                is_cn=False,
+                is_variable=True,
+                fea_path=joinPaths(
                     build_option.src_dir,
                     "features/italic.fea" if is_italic else "features/regular.fea",
-                )
-                print(f"Apply feature file [{fea_path}]")
-                addOpenTypeFeatures(
-                    font,
-                    fea_path,
-                )
-            else:
-                print("Apply feature string")
-                font_config.patch_fea_string(
-                    font=font,
-                    issue_fea_dir=build_option.output_dir,
-                    is_italic=is_italic,
-                    is_cn=False,
-                    is_variable=True,
-                )
+                ),
+            )
 
             style_name = "Italic" if is_italic else "Regular"
             postscript_name = f"{font_config.family_name_compact}-{style_name}"

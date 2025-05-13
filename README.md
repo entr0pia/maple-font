@@ -598,7 +598,9 @@ If you want to build CN base fonts from variable (about 35 MB), setup `"cn.use_s
 
 #### Narrow spacing in CN glyphs
 
-If you think that CN glyphs spacing is **tooooo large**, there is a **EXPERIMENTAL** build option `cn.narrow` or flag `--cn-narrow` to narrow spacing in CN glyphs. You can see effect and track issues in [#249](https://github.com/subframe7536/maple-font/issues/249)
+If you think that **CN glyphs spacing is TOOOOOO large**, there is a build option `cn.narrow` or cli flag `--cn-narrow` to narrow spacing in CN glyphs, but this will make the font cannot be recogized as monospaced font.
+
+You can see effect in [#249](https://github.com/subframe7536/maple-font/issues/249#issuecomment-2871260476).
 
 #### GitHub Mirror
 
@@ -613,43 +615,46 @@ By enabling `cv99`, all Chinese punctuation marks will be centred. See more deta
 ```
 usage: build.py [-h] [-v] [-d] [--debug] [-n] [--feat FEAT] [--apply-fea-file]
                 [--hinted | --no-hinted] [--liga | --no-liga] [--cn-narrow]
-                [--nerd-font | --no-nerd-font] [--cn | --no-cn] [--cn-both]
-                [--ttf-only] [--least-styles] [--cache] [--cn-rebuild]
-                [--archive]
+                [--cn-scale-factor CN_SCALE_FACTOR] [--nerd-font | --no-nerd-font]
+                [--cn | --no-cn] [--cn-both] [--ttf-only] [--least-styles] [--cache]
+                [--cn-rebuild] [--archive]
 
 ✨ Builder and optimizer for Maple Mono
 
 options:
-  -h, --help        show this help message and exit
-  -v, --version     show program's version number and exit
-  -d, --dry         Output config and exit
-  --debug           Add `Debug` suffix to family name and faster build
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
+  -d, --dry             Output config and exit
+  --debug               Add `Debug` suffix to family name and faster build
 
 Feature Options:
-  -n, --normal      Use normal preset, just like `JetBrains Mono` with slashed zero
-  --feat FEAT       Freeze font features, splited by `,` (e.g. `--feat
-                    zero,cv01,ss07,ss08`). No effect on variable format
-  --apply-fea-file  Load feature file from `source/features/{regular,italic}.fea` to
-                    variable font
-  --hinted          Use hinted font as base font in NF / CN / NF-CN (default)
-  --no-hinted       Use unhinted font as base font in NF / CN / NF-CN
-  --liga            Preserve all the ligatures (default)
-  --no-liga         Remove all the ligatures
-  --cn-narrow       Make CN characters narrow (experimental)
+  -n, --normal          Use normal preset, just like `JetBrains Mono` with slashed zero
+  --feat FEAT           Freeze font features, splited by `,` (e.g. `--feat
+                        zero,cv01,ss07,ss08`). No effect on variable format
+  --apply-fea-file      Load feature file from `source/features/{regular,italic}.fea` to
+                        variable font
+  --hinted              Use hinted font as base font in NF / CN / NF-CN (default)
+  --no-hinted           Use unhinted font as base font in NF / CN / NF-CN
+  --liga                Preserve all the ligatures (default)
+  --no-liga             Remove all the ligatures
+  --cn-narrow           Make CN / JP characters narrow (And the font cannot be recogized
+                        as monospaced font)
+  --cn-scale-factor CN_SCALE_FACTOR
+                        Scale factor for CN / JP glyphs (e.g. 1.1)
 
 Build Options:
-  --nerd-font       Build Nerd-Font version (default)
-  --no-nerd-font    Do not build Nerd-Font version
-  --cn              Build Chinese version
-  --no-cn           Do not build Chinese version (default)
-  --cn-both         Build both `Maple Mono CN` and `Maple Mono NF CN`. Nerd-Font
-                    version must be enabled
-  --ttf-only        Only build TTF format
-  --least-styles    Only build regular / bold / italic / bold italic style
-  --cache           Reuse font cache of TTF, OTF and Woff2 formats
-  --cn-rebuild      Reinstantiate CN base font
-  --archive         Build font archives with config and license. If has `--cache`
-                    flag, only archive Nerd-Font and CN formats
+  --nerd-font           Build Nerd-Font version (default)
+  --no-nerd-font        Do not build Nerd-Font version
+  --cn                  Build Chinese version
+  --no-cn               Do not build Chinese version (default)
+  --cn-both             Build both `Maple Mono CN` and `Maple Mono NF CN`. Nerd-Font
+                        version must be enabled
+  --ttf-only            Only build TTF format
+  --least-styles        Only build Regular / Bold / Italic / BoldItalic style
+  --cache               Reuse font cache of TTF, OTF and Woff2 formats
+  --cn-rebuild          Reinstantiate variable CN base font
+  --archive             Build font archives with config and license. If has `--cache`
+                        flag, only archive Nerd-Font and CN formats
 ```
 
 ## Development
