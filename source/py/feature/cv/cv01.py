@@ -1,4 +1,5 @@
 import source.py.feature.ast as ast
+from source.py.feature.calt._infinite_utils import infinite_helper
 
 
 sfx = ".cv01"
@@ -33,6 +34,24 @@ def cv01_subst():
                 "<!--",
                 "<#--",
                 "xml_empty_comment.liga",  # <!---->
+                *infinite_helper.ignore_when_using(
+                    "=>",
+                    "<==",
+                    "==>",
+                    "<=>",
+                    "<==>",
+                    "<=|",
+                    "|=>",
+                    "<-|",
+                    "|->",
+                    "<-",
+                    "->",
+                    "<--",
+                    "-->",
+                    "<-<",
+                    ">->",
+                    "<->",
+                ),
                 ast.gly_seq("<=", "sta"),
                 ast.gly_seq(">=", "end"),
                 ast.gly_seq("<-", "sta"),
