@@ -9,7 +9,7 @@ def main():
 
     command = parser.add_subparsers(dest="command", help="Total tasks")
 
-    nerdfont_parser = command.add_parser("nerd-font", help="Build Nerd-Font base font")
+    nerdfont_parser = command.add_parser("nf", help="Build Nerd-Font base font")
     nerdfont_parser.add_argument(
         "--no-update",
         action="store_true",
@@ -39,10 +39,11 @@ def main():
     )
 
     page_parser = command.add_parser("page", help="Update landing page data")
+    page_parser.add_argument("--woff2", action="store_true", help="Generate new woff2 fonts")
     page_parser.add_argument("--commit", action="store_true", help="Commit changes")
 
     args = parser.parse_args()
-    if args.command == "nerd-font":
+    if args.command == "nf":
         from source.py.task.nerdfont import nerd_font
 
         nerd_font(args.no_update)
@@ -59,7 +60,7 @@ def main():
     elif args.command == "page":
         from source.py.task.page import page
 
-        page("./maple-font-page", "./fonts/Variable", args.commit)
+        page("./maple-font-page", "./fonts/Variable", args.woff2, args.commit)
     else:
         print("Test only")
         from source.py.in_browser import main
