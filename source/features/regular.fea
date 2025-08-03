@@ -1258,7 +1258,7 @@ feature calt {
   lookup infinite_hyphen {
     @HyphenStart = [hyphen.sta.seq hyphen.mid.seq];
     ignore sub less' [exclam numbersign] hyphen hyphen;
-    ignore sub bar bar' hyphen;
+    ignore sub [bar plus] bar' hyphen;
     ignore sub bar' hyphen hyphen @Var;
     ignore sub bar hyphen' hyphen @Var;
     ignore sub bar' hyphen hyphen less @Var;
@@ -1754,6 +1754,41 @@ feature cv08 {
   sub rcommaaccent by rcommaaccent.cv08;
 
 } cv08;
+
+feature cv09 {
+
+  cvParameters {
+    FeatUILabelNameID {
+      name "CV09: Alternative 7 with middle bar, no effect in italic style";
+    };
+  };
+
+  sub seven by seven.cv09;
+  sub seven.dnom by seven.dnom.cv09;
+  sub seven.numr by seven.numr.cv09;
+  sub seveninferior by seveninferior.cv09;
+  sub sevensuperior by sevensuperior.cv09;
+
+} cv09;
+
+feature cv10 {
+
+  cvParameters {
+    FeatUILabelNameID {
+      name "CV10: Alternative Z and z with middle bar, no effect in italic style";
+    };
+  };
+
+  sub Z by Z.cv10;
+  sub Zacute by Zacute.cv10;
+  sub Zcaron by Zcaron.cv10;
+  sub Zdotaccent by Zdotaccent.cv10;
+  sub z by z.cv10;
+  sub zacute by zacute.cv10;
+  sub zcaron by zcaron.cv10;
+  sub zdotaccent by zdotaccent.cv10;
+
+} cv10;
 
 feature cv61 {
 
