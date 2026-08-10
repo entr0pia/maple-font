@@ -1,15 +1,15 @@
-name: Build All Formats and Release
+name: Build NF CN Narrow TTF and Release
 
 on:
   push:
     tags:
-      - v*
+      - 'v*'
   workflow_dispatch:
     inputs:
       build_args:
-        description: 'Args for build.py'
+        description: 'Build arguments for build.py'
         required: false
-        default: ' --cn-narrow'
+        default: '--ttf-only --nf --cjk cn --cjk-narrow --archive'
         type: string
 
 permissions:
@@ -17,43 +17,64 @@ permissions:
 
 jobs:
   build:
-    strategy:
-      matrix:
-        config: [
-          {name: normal-liga, args: "--normal --liga"},
-          {name: normal-no-liga, args: "--normal --no-liga"}
-        ]
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    - uses: actions/setup-python@v5
-      with:
-        python-version: '3.12'
-        cache: 'pip'
-        cache-dependency-path: './requirements.txt'
-    - run: pip install -r requirements.txt
-    - name: Build fonts
-      run: |
-        # python build.py --archive --cn-both --hinted ${{ matrix.config.args }} ${{ github.event.inputs.build_args }}
-        python build.py --archive --cn-both --no-hinted ${{ matrix.config.args }} ${{ github.event.inputs.build_args }}
-    - uses: actions/upload-artifact@v4
-      with:
-        name: release-artifacts-${{ matrix.config.name }}
-        path: fonts/archive/*
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
-  create-release:
+      - name: Setup uv and Python
+        uses: astral-sh/setup-uv@v9
+        with:
+          enable-cache: true
+          prune-cache: false
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: uv sync --locked --no-dev
+
+      - name: Build font
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          ARGS="${{ inputs.build_args }}"
+          if [ -z "$ARGS" ]; then
+            ARGS="--ttf-only --nf --cjk cn --cjk-narrow --archive"
+          fi
+          echo "Running build command: uv run build.py $ARGS"
+          uv run build.py $ARGS
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-fonts
+          path: |
+            fonts/archive/*
+            fonts/**/*.ttf
+          if-no-files-found: error
+
+  release:
     needs: build
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
-    - uses: actions/download-artifact@v4
-      with:
-        pattern: release-artifacts*
-        path: release
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
-    - name: Release artifacts
-      run: python task.py publish
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-fonts
+          path: release
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${{ github.ref_name }}"
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TAG="v$(date +%s)"
+          fi
+          
+          echo "Creating release $TAG..."
+          gh release create "$TAG" release/* --title "Maple Mono $TAG (NF CN Narrow TTF)" --notes "Custom build: Maple Mono with Nerd Font, CN, Narrow spacing in TTF format."
