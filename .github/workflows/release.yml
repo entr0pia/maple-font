@@ -9,7 +9,7 @@ on:
       build_args:
         description: 'Build arguments for build.py'
         required: false
-        default: '--ttf-only --nf --cjk cn --cjk-narrow --archive'
+        default: '--format ttf --no-hinted --no-cjk-hinted --nf --cjk cn --cjk-narrow --archive'
         type: string
 
 permissions:
@@ -38,7 +38,7 @@ jobs:
         run: |
           ARGS="${{ inputs.build_args }}"
           if [ -z "$ARGS" ]; then
-            ARGS="--ttf-only --nf --cjk cn --cjk-narrow --archive"
+            ARGS="--format ttf --no-hinted --no-cjk-hinted --nf --cjk cn --cjk-narrow --archive"
           fi
           echo "Running build command: uv run build.py $ARGS"
           uv run build.py $ARGS
@@ -77,4 +77,4 @@ jobs:
           fi
           
           echo "Creating release $TAG..."
-          gh release create "$TAG" release/* --title "Maple Mono $TAG (NF CN Narrow TTF)" --notes "Custom build: Maple Mono with Nerd Font, CN, Narrow spacing in TTF format."
+          gh release create "$TAG" release/* --title "Maple Mono $TAG (NF CN Narrow TTF Unhinted)" --notes "Custom build: Maple Mono with Nerd Font, CN, Narrow spacing in TTF unhinted format."
